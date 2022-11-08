@@ -47,31 +47,31 @@ def parser() -> argparse.ArgumentParser:
                                action="store_true")
     algo_opts.add_argument("-a", "--align",
                            help="alignment with Umeyama's method (no scale)"
-                           " - requires --ref", action="store_true")
+                                " - requires --ref", action="store_true")
     algo_opts.add_argument("-s", "--correct_scale",
                            help="scale correction with Umeyama's method"
-                           " - requires --ref", action="store_true")
+                                " - requires --ref", action="store_true")
     algo_opts.add_argument(
         "--n_to_align",
         help="the number of poses to use for Umeyama alignment, "
-        "counted from the start (default: all)", default=-1, type=int)
+             "counted from the start (default: all)", default=-1, type=int)
     algo_opts.add_argument(
         "--align_origin",
         help="align the trajectory origin to the origin of the reference "
-        "trajectory", action="store_true")
+             "trajectory", action="store_true")
     algo_opts.add_argument(
         "--sync",
         help="associate trajectories via matching timestamps - requires --ref",
         action="store_true")
     algo_opts.add_argument(
         "--transform_left", help="path to a .json file with a transformation"
-        " to apply to the trajectories (left multiplicative)")
+                                 " to apply to the trajectories (left multiplicative)")
     algo_opts.add_argument(
         "--transform_right", help="path to a .json file with a transformation"
-        " to apply to the trajectories (right_multiplicative)")
+                                  " to apply to the trajectories (right_multiplicative)")
     algo_opts.add_argument(
         "--propagate_transform", help="with --transform_right: transform each "
-        "pose and propagate resulting drift to the next.", action="store_true")
+                                      "pose and propagate resulting drift to the next.", action="store_true")
     algo_opts.add_argument("--invert_transform",
                            help="invert the transformation of the .json file",
                            action="store_true")
@@ -94,12 +94,19 @@ def parser() -> argparse.ArgumentParser:
         "--plot_relative_time", action="store_true",
         help="show timestamps relative to the start of the reference")
     output_opts.add_argument(
-        "--plot_mode", help="the axes for  plot projection",
+        "--plot_mode", help="the axes for plot projection",
         default=SETTINGS.plot_mode_default,
         choices=["xy", "xz", "yx", "yz", "zx", "zy", "xyz"])
     output_opts.add_argument(
+        "--set_traj_names", help="show custom trajectory names independent of topic names",
+        action="store_true")
+    output_opts.add_argument(
+        "--traj_names", help="specify the trajectory names",
+        nargs="*"
+    )
+    output_opts.add_argument(
         "--ros_map_yaml", help="yaml file of an ROS 2D map image (.pgm/.png)"
-        " that will be drawn into the plot", default=None)
+                               " that will be drawn into the plot", default=None)
     output_opts.add_argument("--save_plot", help="path to save plot",
                              default=None)
     output_opts.add_argument("--save_table", help="path to save table with statistics",
@@ -128,7 +135,7 @@ def parser() -> argparse.ArgumentParser:
                                 action="store_true")
     usability_opts.add_argument(
         "--show_full_names", help="don't shorten input file paths when "
-        "displaying trajectory names", action="store_true")
+                                  "displaying trajectory names", action="store_true")
     usability_opts.add_argument("--silent", help="don't print any output",
                                 action="store_true")
     usability_opts.add_argument(
@@ -144,19 +151,19 @@ def parser() -> argparse.ArgumentParser:
     sub_parsers.required = True
     kitti_parser = sub_parsers.add_parser(
         "kitti", description="%s for KITTI pose files - %s" %
-        (basic_desc, lic), parents=[shared_parser])
+                             (basic_desc, lic), parents=[shared_parser])
     kitti_parser.add_argument("pose_files", help="one or multiple pose files",
                               nargs='+')
 
     tum_parser = sub_parsers.add_parser(
         "tum", description="%s for TUM trajectory files - %s" %
-        (basic_desc, lic), parents=[shared_parser])
+                           (basic_desc, lic), parents=[shared_parser])
     tum_parser.add_argument("traj_files",
                             help="one or multiple trajectory files", nargs='+')
 
     euroc_parser = sub_parsers.add_parser(
         "euroc", description="%s for EuRoC MAV .csv's - %s" %
-        (basic_desc, lic), parents=[shared_parser])
+                             (basic_desc, lic), parents=[shared_parser])
     euroc_parser.add_argument(
         "state_gt_csv",
         help="<sequence>/mav0/state_groundtruth_estimate0/data.csv", nargs='+')
@@ -217,7 +224,7 @@ def load_trajectories(args):
             else:
                 trajectories[
                     csv_file] = file_interface.read_euroc_csv_trajectory(
-                        csv_file)
+                    csv_file)
         if args.ref:
             ref_traj = file_interface.read_euroc_csv_trajectory(args.ref)
     elif args.subcommand in ("bag", "bag2"):
@@ -256,6 +263,7 @@ def load_trajectories(args):
         finally:
             bag.close()
     return trajectories, ref_traj
+
 
 # TODO refactor
 def print_traj_info(name, traj, verbose=False, full_check=False):
@@ -395,7 +403,7 @@ def run(args):
     if args.transform_left or args.transform_right:
         tf_type = "left" if args.transform_left else "right"
         tf_path = args.transform_left \
-                if args.transform_left else args.transform_right
+            if args.transform_left else args.transform_right
         transform = file_interface.load_transform_json(tf_path)
         logger.debug(SEP)
         if not lie.is_se3(transform):
@@ -434,6 +442,21 @@ def run(args):
         # for x-axis alignment starting from 0 with --plot_relative_time
         start_time = None
 
+        if args.set_traj_names:
+            if not args.traj_names:
+                die("No trajectory names given - use --traj_names to set custom names or unset --set_traj_names")
+            for i in range(len(args.traj_names)):
+                args.traj_names[i] = args.traj_names[i].replace("_", " ")
+
+
+            nr_trajectories = len(trajectories)
+            if args.ref:
+                nr_trajectories += 1
+            if len(args.traj_names) != nr_trajectories:
+                error_msg = "traj_names (" + str(len(args.traj_names)) + ") must match the size of given trajectories (" + str(nr_trajectories) + ")"
+                die(error_msg)
+            traj_names = iter(args.traj_names)
+
         if args.ref:
             if isinstance(ref_traj, trajectory.PoseTrajectory3D) \
                     and args.plot_relative_time:
@@ -441,6 +464,8 @@ def run(args):
 
             short_traj_name = to_compact_name(
                 args.ref, args, SETTINGS.plot_usetex)
+            if args.set_traj_names:
+                short_traj_name = next(traj_names)
             plot.traj(ax_traj, plot_mode, ref_traj,
                       style=SETTINGS.plot_reference_linestyle,
                       color=SETTINGS.plot_reference_color,
@@ -474,6 +499,8 @@ def run(args):
                 color = next(cmap_colors)
 
             short_traj_name = to_compact_name(name, args, SETTINGS.plot_usetex)
+            if args.set_traj_names:
+                short_traj_name = next(traj_names)
             plot.traj(ax_traj, plot_mode, traj,
                       SETTINGS.plot_trajectory_linestyle, color,
                       short_traj_name, alpha=SETTINGS.plot_trajectory_alpha)
@@ -572,4 +599,5 @@ def run(args):
 
 if __name__ == '__main__':
     from evo import entry_points
+
     entry_points.traj()
