@@ -308,7 +308,7 @@ def plot_mode_to_idx(
 
 
 def traj(ax: plt.Axes, plot_mode: PlotMode, traj: trajectory.PosePath3D,
-         style: str = '-', color: str = 'black', label: str = "",
+         style: str = '-', color: str = 'black', label: str = "", legend_size: int = 6,
          alpha: float = 1.0) -> None:
     """
     plot a path/trajectory based on xyz coordinates into an axis
@@ -318,6 +318,7 @@ def traj(ax: plt.Axes, plot_mode: PlotMode, traj: trajectory.PosePath3D,
     :param style: matplotlib line style
     :param color: matplotlib color
     :param label: label (for legend)
+    :param legend_size: text size for legend
     :param alpha: alpha value for transparency
     """
     x_idx, y_idx, z_idx = plot_mode_to_idx(plot_mode)
@@ -330,8 +331,8 @@ def traj(ax: plt.Axes, plot_mode: PlotMode, traj: trajectory.PosePath3D,
         ax.plot(x, y, style, color=color, label=label, alpha=alpha)
     if SETTINGS.plot_xyz_realistic:
         set_aspect_equal(ax)
-    if label:
-        ax.legend(frameon=True)
+    if label and legend_size != 0:
+        ax.legend(frameon=True, fontsize=legend_size)
 
 
 def colored_line_collection(
@@ -476,7 +477,7 @@ def draw_correspondence_edges(ax: plt.Axes, traj_1: trajectory.PosePath3D,
 
 
 def traj_xyz(axarr: np.ndarray, traj: trajectory.PosePath3D, style: str = '-',
-             color: str = 'black', label: str = "", alpha: float = 1.0,
+             color: str = 'black', label: str = "", legend_size: int = 6, alpha: float = 1.0,
              start_timestamp: typing.Optional[float] = None) -> None:
     """
     plot a path/trajectory based on xyz coordinates into an axis
@@ -508,8 +509,8 @@ def traj_xyz(axarr: np.ndarray, traj: trajectory.PosePath3D, style: str = '-',
                       label=label, alpha=alpha)
         axarr[i].set_ylabel(ylabels[i])
     axarr[2].set_xlabel(xlabel)
-    if label:
-        axarr[0].legend(frameon=True)
+    if label and legend_size != 0:
+        axarr[0].legend(frameon=True, fontsize=legend_size)
 
 
 def traj_rpy(axarr: np.ndarray, traj: trajectory.PosePath3D, style: str = '-',

@@ -98,6 +98,10 @@ def parser() -> argparse.ArgumentParser:
         default=SETTINGS.plot_mode_default,
         choices=["xy", "xz", "yx", "yz", "zx", "zy", "xyz"])
     output_opts.add_argument(
+        "--legend_size", default=6, type=int,
+        help="text size for plot legend"
+    )
+    output_opts.add_argument(
         "--ros_map_yaml", help="yaml file of an ROS 2D map image (.pgm/.png)"
         " that will be drawn into the plot", default=None)
     output_opts.add_argument("--save_plot", help="path to save plot",
@@ -433,7 +437,7 @@ def run(args):
 
         # for x-axis alignment starting from 0 with --plot_relative_time
         start_time = None
-
+        print("legend size: ", args.legend_size)
         if args.ref:
             if isinstance(ref_traj, trajectory.PoseTrajectory3D) \
                     and args.plot_relative_time:
@@ -445,12 +449,14 @@ def run(args):
                       style=SETTINGS.plot_reference_linestyle,
                       color=SETTINGS.plot_reference_color,
                       label=short_traj_name,
-                      alpha=SETTINGS.plot_reference_alpha)
+                      legend_size=args.legend_size,
+                      alpha=SETTINGS.plot_reference_alpha
+                      )
             plot.draw_coordinate_axes(ax_traj, ref_traj, plot_mode,
                                       SETTINGS.plot_reference_axis_marker_scale)
             plot.traj_xyz(
                 axarr_xyz, ref_traj, style=SETTINGS.plot_reference_linestyle,
-                color=SETTINGS.plot_reference_color, label=short_traj_name,
+                color=SETTINGS.plot_reference_color, label=short_traj_name, legend_size=args.legend_size,
                 alpha=SETTINGS.plot_reference_alpha,
                 start_timestamp=start_time)
             plot.traj_rpy(
@@ -476,7 +482,7 @@ def run(args):
             short_traj_name = to_compact_name(name, args, SETTINGS.plot_usetex)
             plot.traj(ax_traj, plot_mode, traj,
                       SETTINGS.plot_trajectory_linestyle, color,
-                      short_traj_name, alpha=SETTINGS.plot_trajectory_alpha)
+                      short_traj_name, legend_size=args.legend_size, alpha=SETTINGS.plot_trajectory_alpha)
             plot.draw_coordinate_axes(ax_traj, traj, plot_mode,
                                       SETTINGS.plot_axis_marker_scale)
             if ref_traj and synced and SETTINGS.plot_pose_correspondences:
@@ -485,7 +491,7 @@ def run(args):
                     style=SETTINGS.plot_pose_correspondences_linestyle,
                     alpha=SETTINGS.plot_trajectory_alpha)
             plot.traj_xyz(axarr_xyz, traj, SETTINGS.plot_trajectory_linestyle,
-                          color, short_traj_name,
+                          color, short_traj_name, args.legend_size,
                           alpha=SETTINGS.plot_trajectory_alpha,
                           start_timestamp=start_time)
             plot.traj_rpy(axarr_rpy, traj, SETTINGS.plot_trajectory_linestyle,
