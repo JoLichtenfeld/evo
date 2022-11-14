@@ -50,6 +50,7 @@ class MetricsException(EvoException):
 class StatisticsType(Enum):
     rmse = "rmse"
     mean = "mean"
+    mean_xy = "mean_xy"
     median = "median"
     std = "std"
     min = "min"
@@ -125,6 +126,8 @@ class PE(Metric):
             return np.sum(squared_errors)
         elif statistics_type == StatisticsType.mean:
             return float(np.mean(self.error))
+        elif statistics_type == StatisticsType.mean_xy:
+            return float(np.mean(self.error_xy))
         elif statistics_type == StatisticsType.median:
             return np.median(self.error)
         elif statistics_type == StatisticsType.max:
@@ -270,6 +273,7 @@ class RPE(PE):
                 np.linalg.norm(traj_est.positions_xyz[i] -
                                traj_est.positions_xyz[j]) for i, j in id_pairs
             ])
+ 
             self.error = np.abs(ref_distances - est_distances)
             if self.pose_relation == PoseRelation.point_distance_error_ratio:
                 nonzero = ref_distances.nonzero()[0]
@@ -334,6 +338,7 @@ class APE(PE):
         self.pose_relation = pose_relation
         self.E: typing.List[np.ndarray] = []
         self.error = np.array([])
+        self.error_xy = np.array([])
         if pose_relation in (PoseRelation.translation_part,
                              PoseRelation.point_distance):
             self.unit = Unit.meters
@@ -368,6 +373,7 @@ class APE(PE):
         traj_ref: reference evo.trajectory.PosePath or derived
         traj_est: estimated evo.trajectory.PosePath or derived
         """
+        print("process_data\n\n")
         if len(data) != 2:
             raise MetricsException(
                 "please provide data tuple as: (traj_ref, traj_est)")
@@ -394,6 +400,7 @@ class APE(PE):
                                   PoseRelation.point_distance):
             # E is an array of position vectors only in this case
             self.error = np.array([np.linalg.norm(E_i) for E_i in self.E])
+            self.error_xy = np.array([np.linalg.norm(E_i[:2]) for E_i in self.E])
         elif self.pose_relation == PoseRelation.rotation_part:
             self.error = np.array([
                 np.linalg.norm(lie.so3_from_se3(E_i) - np.eye(3))
